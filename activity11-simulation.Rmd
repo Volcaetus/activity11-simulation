@@ -26,6 +26,9 @@ One way to make sure that you get similar results each time is to always run all
 For this activity, you will need the `{tidyverse}`.
 
 **delete this line and load `{tidyverse}`**
+```{r}
+library(tidyverse)
+```
 
 
 ## Exploration
@@ -59,13 +62,22 @@ ggplot(norm_samp_1000, aes(x = values)) +
 
 Using `norm_samp_1000`, obtain the mean and standard deviation of this sample?
 
-
+```{r}
+mean(norm_samp_1000$values)
+sd(norm_samp_1000$values)
+```
 
 Now, create a new simulation.
 In this you will obtain a sample of size 30 from from a Normally distributed variable with a mean 50 and standard deviation 10, and find the mean and standard deviation.
 How do the mean and standard deviation compare to your answers above?
 
+```{r}
+#use as_tibble instead of as_data_frame
+sim=as_tibble(rnorm(n = 30, mean = 50, sd = 10))
 
+mean(sim$value)
+sd(sim$value)
+```
 
 ### Non-normally distributed population
 
@@ -73,7 +85,13 @@ Using a similar process, obtain Exponentially distributed variable (`?rexp`) wit
 Obtain a sample of 1,000 observations and a sample of 30 observations.
 Then, calculate the mean and standard deviation of each sample and discuss how the values are similar and how they differ.
 
+```{r}
+#use as_tibble instead of as_data_frame
+sim=as_tibble(rexp(n = 1000, rate = .02))
 
+mean(sim$value)
+sd(sim$value)
+```
 
 
 ![](README-img/noun_pause.png) **Planned Pause Point**: If you have any questions, contact your instructor. Otherwise feel free to continue on.
@@ -86,14 +104,39 @@ To do this, we will create a new function.
 Yay!
 
 Write a function (say, `generate_n_samples`) that takes `n` (how many values to sample) as its argument.
-This function should produce a dataset containing four columns: one that generates data from a **Normal** distribution (parameters mean and standard deviation), one from a **Exponential** distribution (parameter rate), one from a **Chi-square** distribution` (parameter degrees of freedom), and one from a **Uniform** distribution (parameters minimum and maximum).
+This function should produce a dataset containing four columns: 
+one that generates data from a **Normal** distribution (parameters mean and standard deviation), 
+one from a **Exponential** distribution (parameter rate), 
+one from a **Chi-square** distribution` (parameter degrees of freedom), 
+and one from a **Uniform** distribution (parameters minimum and maximum).
 This function should produce a dataset with `n` rows.
 
 You should **not** use the default parameter options for these distributions (e.g., your Normal data should not have a mean of 0 or a standard deviation of 1).
 Test your function with `n = 30` and `n = 1000`.
 
+```{r}
+gen.samp <- function(x) {
+  g=tibble(
+    norm = rnorm(x, mean = 10, sd = 10),
+    exp = rexp(x, rate = 10),
+    chi = rchisq(x, df = 10),
+    uni = runif(x, min = 0, max = 100))
+}
+```
 
+```{r}
+try <- gen.samp(30) %>% 
+  summarise(nMean = mean(norm),expMean = mean(exp),chiMean = mean(chi),
+  uniMean = mean(uni),nSD = sd(norm),expSD = sd(exp), chiSD = sd(chi),uniSD = sd(uni))
+try
+```
 
+```{r}
+try <- gen.samp(1000) %>% 
+  summarise(nMean = mean(norm),expMean = mean(exp),chiMean = mean(chi),
+  uniMean = mean(uni),nSD = sd(norm),expSD = sd(exp), chiSD = sd(chi),uniSD = sd(uni))
+try
+```
 
 Keep the following information in mind for the rest of this activity.
 The mean and standard deviation for each of the general distributions we are using in this activity are (using the R function arguments):
@@ -129,6 +172,16 @@ Then, use this function in addition to your multiple distribution sample generat
 Discuss how the means compares for each distribution.
 Note that it doesn't make sense to compare means/standard deviations across the distributions.
 
+```{r}
+dist = gen.samp(30)
+sample_mean(dist)
+```
+
+
+```{r}
+dist = gen.samp(1000)
+sample_mean(dist)
+```
 
 
 
@@ -156,24 +209,38 @@ map(1:1000, ~rnorm(30, mean = 50, sd = 10))
 Continuing to work with your multiple distribution sample generator from above, generate 1,000 samples from the four distributions each with size 30.
 We will want to continue to work with this list so be sure to assign these samples to an appropriately named object (say, `multiple_samples`).
 
-
+```{r}
+mult = replicate(1000, gen.samp(30), simplify = FALSE)
+#mult = rerun(1000, gen.samp(30))
+```
 
 Calculate the sample mean of each sample using the appropriate `map` function and my `sample_mean` function to produce a *data frame* of multiple sample means from your multiple samples object.
 Assign these sample means to an appropriately named object.
 
 
+```{r}
+x = purrr::map_df(mult, sample_mean)
+x
+```
 
 
 
 Restructure your previous sample means R object to, instead of having 1,000 rows and 4 columns, have 4,000 rows and 2 columns where the columns are named `distribution` and `means`.
 Assign this restructured data to an appropriately named object.
 
-
+```{r}
+try1 = x %>%
+  pivot_longer(starts_with("mean"), names_to = "dist", values_to = "avg")
+```
 
 
 Using the restructured data, create a histogram for each `distribution` using a *facet* layer.
 
-
+```{r}
+ggplot(try1, aes(x = avg))+
+  geom_histogram()+
+  facet_grid(~dist)
+```
 
 
 Comment on each of shape of each of the mean plots above.
@@ -184,7 +251,11 @@ Note, looking at the wiki pages linked early in this activity will help you comp
 
 Using the restructured data, obtain the mean and standard deviation **for each** of the distributions.
 
-
+```{r}
+try1%>%
+  group_by(dist)%>%
+  summarise(a.mean = mean(avg), b.sd = sd(avg))
+```
 
 
 Comment on how each mean compares to the "population values" mean that you calculated above.
